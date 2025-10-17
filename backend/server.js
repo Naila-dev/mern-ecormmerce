@@ -1,45 +1,28 @@
 // server.js
-// ----------------------------
-// Basic Node + Express server
-// ----------------------------
+// basic express + mongoose server
 
-// Import required libraries
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors"); // allows frontend (React) to talk to backend
-const bodyParser = require("body-parser");
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 
-// ----------------------------
-// MIDDLEWARE SETUP
-// ----------------------------
-app.use(cors());                 // allow requests from React
-app.use(bodyParser.json());      // parse incoming JSON data
+// middleware
+app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
+app.use(express.json());
 
-// ----------------------------
-// CONNECT TO MONGODB
-// ----------------------------
-// (Make sure MongoDB is running locally or use MongoDB Atlas)
-mongoose.connect("mongodb://localhost:27017/simpleEcom", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log("✅ Connected to MongoDB"))
-.catch(err => console.log("❌ MongoDB connection error:", err));
+// connect mongo
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/simpleecom')
+  .then(() => console.log(' 🦾 ✅ success,mongo is running'))
+  .catch(err => console.error('mongo error:', err));
 
-// ----------------------------
-// ROUTES
-// ----------------------------
-// Import routes for auth and products
-const authRoutes = require("./routes/auth");
-const productRoutes = require("./routes/products");
+// routes
+app.use('/simple-ecom/auth', require('./routes/auth'));
+app.use('/simple-ecom/products', require('./routes/products'));
+app.use('/simple-ecom/cart', require('./routes/cart'));
+app.use('/simple-ecom/orders', require('./routes/orders'));
 
-app.use("/simple-ecom/auth", authRoutes); // use the auth routes
-app.use("/simple-ecom/products", productRoutes);
-
-// ----------------------------
-// START SERVER
-// ----------------------------
-const PORT = 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// start
+const port = process.env.PORT || 5000;
+app.listen(port, () => console.log(`server running on ${port}`));

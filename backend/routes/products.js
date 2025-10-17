@@ -1,79 +1,101 @@
-// Products routes
-
-// Import necessary modules
+// routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/product');
+const Product = require('../models/product'); // Use capitalized model name
+const protect = require('../middleware/auth'); 
 
-// Create a new product
-router.post("/", async (req, res) => {
+// @route POST /api/products
+// @desc Create a new product (Protected & links to creator)
+router.post("/", protect, async (req, res) => {
     try {
-        const { name, price, description } = req.body;
-        // Save the product to the database
-        const product = new Product({ name, price, description });
-        await product.save();
-        res.status(200).json("Product created successfully", product);
+        const { name, price, description, countInStock = 0, image } = req.body;
+        
+        const product = new Product({
+            name, price, description, countInStock, image,
+            user: req.user._id, // LINK TO CREATOR (Requirement 1c)
+        });
+        
+        const createdProduct = await product.save();
+        return res.status(201).json(createdProduct);
     } catch (err) {
-        res.status(500).json(err);
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ error: err.message });
+        }
+        return res.status(500).json({ error: "Server Error: " + err.message });
     }
 });
 
-// Read/Get all products
+// @route GET /api/products
+// @desc Get all products (Public view)
 router.get("/", async (req, res) => {
     try {
-        const products = await Product.find();
-        res.status(200).json(products);
-
-        // If no products found/exists
-        if (products.length === 0) {
-            return res.status(404).json("No products found");
-        }
+        const products = await Product.find().populate('user', 'username'); 
+        return res.status(200).json(products);
     } catch (err) {
-        res.status(500).json(err);
+        return res.status(500).json({ error: "Server Error: " + err.message });
     }
 });
 
-// Read/get one product by its ID
+// @route GET /api/products/:id
+// @desc Get single product (Public view)
 router.get("/:id", async (req, res) => {
     try {
+        const product = await Product.findById(req.params.id).populate('user', 'username');
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+        return res.status(200).json(product);
+    } catch (err) {
+        if (err.kind === 'ObjectId') {
+            return res.status(404).json({ message: "Product not found (Invalid ID format)" });
+        }
+        return res.status(500).json({ error: "Server Error: " + err.message });
+    }
+});
+
+// @route PUT /api/products/:id
+// @desc Update a product (Protected & Authorized check)
+router.put("/:id", protect, async (req, res) => {
+    try {
         const product = await Product.findById(req.params.id);
-        // If product not found
-        if (!product) {
-            return res.status(404).json("Product not found");
+        
+        if (!product) return res.status(404).json({ message: "Product not found" });
+        
+        // AUTHORIZATION CHECK (Requirement 1c)
+        if (product.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: "Not authorized to update this product" });
         }
-        res.status(200).json(product); // if product found
+
+        const updatedProduct = await Product.findByIdAndUpdate(
+            req.params.id,
+            req.body, 
+            { new: true, runValidators: true } 
+        );
+
+        return res.status(200).json({ message: "Product updated successfully", product: updatedProduct });
     } catch (err) {
-        res.status(500).json(err);
+        return res.status(500).json({ error: "Server Error: " + err.message });
     }
 });
 
-// Update a product by its ID
-router.put("/:id", async (req, res) => {
+// @route DELETE /api/products/:id
+// @desc Delete a product (Protected & Authorized check)
+router.delete("/:id", protect, async (req, res) => {
     try {
-        // Fetch the records from the form in the frontend
-        const { name, price, description } = req.body;
-        // Update the product in the database
-        await Product.findByIdAndUpdate(req.params.id, { name, price, description }); // Update the product in the database
-        // If product updated successfully
-        res.status(200).json("Product updated successfully", { name, price, description });
-    } catch (err) {
-        res.status(500).json(err);
-    }
-});
-
-// Delete a product by its ID
-router.delete("/:id", async (req, res) => {
-    try {
-        // Get the product by its ID and delete it
-        const product = await Product.findByIdAndDelete(req.params.id);
-        // If product not found
-        if (!product) {
-            return res.status(404).json("Product not found");
+        const product = await Product.findById(req.params.id);
+        
+        if (!product) return res.status(404).json({ message: "Product not found" });
+        
+        // AUTHORIZATION CHECK (Requirement 1c)
+        if (product.user.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: "Not authorized to delete this product" });
         }
-        // If product deleted successfully
-        res.status(200).json("Product deleted successfully");
+        
+        await Product.findByIdAndDelete(req.params.id);
+        
+        return res.status(200).json({ message: "Product deleted successfully" });
     } catch (err) {
-        res.status(500).json(err);
+        return res.status(500).json({ error: "Server Error: " + err.message });
     }
 });
 

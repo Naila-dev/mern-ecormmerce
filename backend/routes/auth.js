@@ -1,59 +1,66 @@
-// Handling user registration and login
-// Import necessary modules
-const express = require('express'); // Express framework
-const router = express.Router(); // Create a router instance to define routes
-const bcrypt = require('bcryptjs'); // For hashing passwords
-const jwt = require('jsonwebtoken'); // For generating JWT tokens for authentication
-const User = require('../models/user'); // User model is defined in models/User.js
+// routes/auth.js
+const express = require('express');
+const router = express.Router();
+const User = require('../models/user'); // Use capitalized model name
 
-// Secret key for signing tokens (just for demo)
-const SECRET = "secret123";
-
-// Route for user registration
+// @route POST /api/auth/register
+// @desc Register a new user
 router.post("/register", async (req, res) => {
     try {
-        // Extract username and password from frontend form (request body)
         const { username, password } = req.body;
 
-        // Hash the password using bcrypt
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // The pre-save hook in the User model handles password hashing
+        const newUser = new User({ username, password });
+        await newUser.save(); 
 
-        // Create and save the new user to the database
-        const newUser = new User({ username, password: hashedPassword });
-        await newUser.save();
-
-        // Return a success response
-        res.json({ message: "User registered successfully" });
+        // Generate token using the model method
+        const token = newUser.getSignedJwtToken();
+        
+        res.status(201).json({ 
+            success: true,
+            message: "User registered successfully", 
+            token 
+        });
     } catch (err) {
-        res.status(400).json({ error: "Registration failed" });
+        let errorMsg = "Registration failed";
+        // Handle duplicate key error (username unique constraint)
+        if (err.code === 11000) {
+            errorMsg = "Username already exists";
+            return res.status(400).json({ success: false, error: errorMsg });
+        }
+        res.status(500).json({ success: false, error: "Server Error: " + err.message });
     }
 });
 
-// Route for user login
+// @route POST /api/auth/login
+// @desc Log in user & get token
 router.post("/login", async (req, res) => {
     try {
-        // Extract username and password from frontend form (request body)
         const { username, password } = req.body;
 
-        // Find the user in the database by username
-        const user = await User.findOne({ username });
-        // If user not found, return error
-        if (!user) return res.status(400).json({ error: "User not found" });
+        // 1. Find user, explicitly selecting the password field
+        const user = await User.findOne({ username }).select('+password'); 
+        if (!user) {
+            return res.status(401).json({ success: false, error: "Invalid credentials" });
+        }
 
-        // Compare the provided password with the hashed password in the database
-        const isMatch = await bcrypt.compare(password, user.password);
-        // If password does not match, return error
-        if (!isMatch) return res.status(400).json({ error: "Wrong Password" });
+        // 2. Compare password using the model method
+        const isMatch = await user.matchPassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, error: "Invalid credentials" });
+        }
 
-        // Create JWT token
-        const token = jwt.sign({ id: user._id }, SECRET);
+        // 3. Generate token
+        const token = user.getSignedJwtToken();
 
-        // Success message 
-        res.json({ message: "Login successful", token });
+        res.status(200).json({ 
+            success: true, 
+            message: "Login successful", 
+            token 
+        });
     } catch (err) {
-        res.status(400).json({ error: "Login failed" });
+        res.status(500).json({ success: false, error: "Login failed" });
     }
 });
 
-// Export the router to be used in the main server file
 module.exports = router;

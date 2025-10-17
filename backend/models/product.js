@@ -1,15 +1,36 @@
-// Import mongoose
+// models/Product.js
 const mongoose = require('mongoose');
 
-// Define the product schema
 const productSchema = new mongoose.Schema({
-    name: String,
-    price: Number,
-    description: String,
-});
+    name: {
+        type: String,
+        required: [true, 'A product must have a name'],
+        trim: true,
+    },
+    price: {
+        type: Number,
+        required: [true, 'A product must have a price'],
+        default: 0,
+    },
+    description: {
+        type: String,
+        required: [true, 'A product must have a description'],
+    },
+    image: {
+        type: String,
+        default: '/images/sample.jpg', // Placeholder
+    },
+    countInStock: {
+        type: Number,
+        required: true,
+        default: 0,
+    },
+    // CRITICAL: Link to the User who created the product for authorization checks
+    user: {
+        type: mongoose.Schema.ObjectId, 
+        ref: 'User', // Must match the exported model name above
+        required: true, 
+    },
+}, { timestamps: true }); 
 
-// Create the product model
-const Product = mongoose.model('Product', productSchema);
-
-// Export the product model
-module.exports = Product;
+module.exports = mongoose.model('Product', productSchema);
