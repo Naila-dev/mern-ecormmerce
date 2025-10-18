@@ -9,11 +9,15 @@ require('dotenv').config();
 const app = express();
 
 // middleware
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // connect mongo
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/simpleecom')
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/simple_ecom')
   .then(() => console.log(' 🦾 ✅ success,mongo is running'))
   .catch(err => console.error('mongo error:', err));
 
