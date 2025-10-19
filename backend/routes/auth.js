@@ -39,22 +39,19 @@ router.post("/login", async (req, res) => {
     if (!username || !password)
       return res.status(400).json({ msg: "Username and password are required" });
 
-    // Need to explicitly select password because the schema excludes it by default
-    const user = await User.findOne({ username }).select('+password');
-    if (!user) return res.status(401).json({ msg: "Invalid credentials" });
+    const user = await User.findOne({ username });
+    if (!user)
+      return res.status(401).json({ msg: "Invalid credentials" });
 
-    // Prefer the model method which compares hashed password
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) return res.status(401).json({ msg: "Invalid credentials" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(401).json({ msg: "Invalid credentials" });
 
-    if (!process.env.JWT_SECRET) {
-      // Clear message to help with local dev misconfiguration
-      return res.status(500).json({ msg: "Server misconfiguration: JWT_SECRET not set" });
-    }
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRE || "1d",
-    });
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE || "1d" }
+    );
 
     res.json({ token });
   } catch (err) {
