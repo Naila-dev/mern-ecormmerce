@@ -1,23 +1,41 @@
-import { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+// src/pages/Login.js
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { login } = useContext(AuthContext);
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [form, setForm] = useState({ username: "", password: "" });
   const navigate = useNavigate();
 
-  const handleSubmit = async e => {
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleLogin = (e) => {
     e.preventDefault();
-    await login(form.username, form.password);
-    navigate('/');
+
+    if (form.username === "Rkamunu" && form.password === "41831655") {
+      localStorage.setItem("user", JSON.stringify(form));
+      alert("✅ Logged in as admin!");
+      navigate("/dashboard");
+    } else {
+      localStorage.setItem("user", JSON.stringify(form));
+      alert("✅ Logged in as viewer!");
+      navigate("/");
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input placeholder="Username" onChange={e => setForm({ ...form, username: e.target.value })} />
-      <input placeholder="Password" type="password" onChange={e => setForm({ ...form, password: e.target.value })} />
-      <button type="submit">Login</button>
-    </form>
+    <div className="col-md-4 mx-auto">
+      <h3>Login</h3>
+      <form onSubmit={handleLogin}>
+        <div className="mb-3">
+          <label>Username</label>
+          <input name="username" className="form-control" onChange={handleChange} required />
+        </div>
+        <div className="mb-3">
+          <label>Password</label>
+          <input type="password" name="password" className="form-control" onChange={handleChange} required />
+        </div>
+        <button className="btn btn-primary w-100">Login</button>
+      </form>
+    </div>
   );
 }
