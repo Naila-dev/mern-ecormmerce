@@ -24,5 +24,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-// End of file: backend/.env
-
