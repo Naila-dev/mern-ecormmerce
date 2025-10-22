@@ -1,59 +1,59 @@
-// Handling user registration and login
-// Import necessary modules
-const express = require('express'); // Express framework
-const router = express.Router(); // Create a router instance to define routes
-const bcrypt = require('bcryptjs'); // For hashing passwords
-const jwt = require('jsonwebtoken'); // For generating JWT tokens for authentication
-const User = require('../models/user'); // User model is defined in models/User.js
+//import necessary modules
+//modules is a single file that contains re-useable code (a book in a shelf)
+//library a collection of modules packed together to provide a broader functionality (the shelf itself)
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User'); // Import the User model
 
-// Secret key for signing tokens (just for demo)
-const SECRET = "secret123";
+// --- Routes ---
 
-// Route for user registration
-router.post("/register", async (req, res) => {
+// Register
+router.post('/register', async (req, res) => {
     try {
-        // Extract username and password from frontend form (request body)
         const { username, password } = req.body;
 
-        // Hash the password using bcrypt
+        // Basic validation
+        if (!username || !password) {
+            return res.status(400).json({ message: 'Please provide username and password.' });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Username already exists.' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Create and save the new user to the database
-        const newUser = new User({ username, password: hashedPassword });
-        await newUser.save();
-
-        // Return a success response
-        res.json({ message: "User registered successfully" });
-    } catch (err) {
-        res.status(400).json({ error: "Registration failed" });
+        const user = new User({ username, password: hashedPassword });
+        await user.save();
+        res.status(201).json({ message: 'User registered successfully.' });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ message: 'Server error during registration.' });
     }
 });
 
-// Route for user login
-router.post("/login", async (req, res) => {
+// Login
+router.post('/login', async (req, res) => {
     try {
-        // Extract username and password from frontend form (request body)
         const { username, password } = req.body;
 
-        // Find the user in the database by username
+        if (!username || !password) {
+            return res.status(400).json({ message: 'Please provide username and password.' });
+        }
+
         const user = await User.findOne({ username });
-        // If user not found, return error
-        if (!user) return res.status(400).json({ error: "User not found" });
-
-        // Compare the provided password with the hashed password in the database
-        const isMatch = await bcrypt.compare(password, user.password);
-        // If password does not match, return error
-        if (!isMatch) return res.status(400).json({ error: "Wrong Password" });
-
-        // Create JWT token
-        const token = jwt.sign({ id: user._id }, SECRET);
-
-        // Success message 
-        res.json({ message: "Login successful", token });
-    } catch (err) {
-        res.status(400).json({ error: "Login failed" });
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        res.json({ token });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Server error during login.' });
     }
 });
 
-// Export the router to be used in the main server file
 module.exports = router;

@@ -1,38 +1,54 @@
-// Import required libraries
-const express = require("express");   // Express for building the server and handling routes
-const mongoose = require("mongoose"); // Mongoose for MongoDB object modeling
-const cors = require("cors");         // CORS middleware for enabling cross-origin requests
-const bodyParser = require("body-parser"); // Middleware for parsing incoming request bodies (JSON)
+//import modules for our ecommerce backend
+const express = require('express'); //the server framework
+const mongoose = require('mongoose'); //to interact with MongoDB
+const cors = require('cors'); //to handle Cross-Origin Resource Sharing
+require('dotenv').config(); // Load environment variables
 
-// Create an instance of the Express application
+//initialize the express app
 const app = express();
 
-// Middlewares
+//middleware setup
+app.use(express.json()); //parse JSON request bodies
 
-app.use(cors());                // Enable Cross-Origin Resource Sharing (CORS) to allow React app to make requests to the backend
-app.use(bodyParser.json());     // Middleware to parse incoming JSON data from requests
+// For production, you should restrict the origin to your frontend's domain
+// For development, explicitly allow your React app's origin.
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? 'https://your-frontend-domain.com' 
+    : 'http://localhost:3000';
+app.use(cors({
+    origin: allowedOrigins,
+    credentials: true // Allow cookies and authorization headers
+}));
 
-// Connect to MongoDB using Mongoose
-// (Make sure MongoDB is running locally or use MongoDB Atlas)
-// Use environment variable when available to avoid committing credentials.
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://raphachegekamunu:41831655@cluster0.ddv4ceq.mongodb.net/SimpleEcommerce?retryWrites=true&w=majority&appName=Cluster0";
-
-// Note: modern MongoDB Node driver (>=4) doesn't require these options; passing them is deprecated.
+//connect to MongoDB
+//Make sure MongoDB is running locally or in MongoDB Atlas
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/ecommerce';
 mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch(err => console.log("❌ Error connecting to MongoDB:", err));
+.then(() => {
+    console.log('Connected to MongoDB');
+}).catch(err => {
+    console.error('Failed to connect to MongoDB', err);
+});
 
-// Importing route handlers for authentication, products, and MPESA
-const authRoutes = require("./routes/auth");         // Auth-related routes (login, registration, etc.)
-const productRoutes = require("./routes/products"); // Product-related routes (CRUD operations for products)
+//import routes for products and users
+const productRoutes = require('./routes/products');
+const authRoutes = require('./routes/auth');
+const cartRoutes = require('./routes/cart');
+const mpesaRoutes = require('./routes/mpesa');
+const orderRoutes = require('./routes/orders');
+const authMiddleware = require('./middleware/auth'); // Import the auth middleware
+const checkoutRoutes = require('./routes/checkout');
 
-// Using routes
-app.use("/simple-ecom/auth", authRoutes);   // All routes starting with '/simple-ecom/auth' will be handled by the authRoutes
-app.use("/simple-ecom/products", productRoutes); // All routes starting with '/simple-ecom/products' will be handled by the productRoutes
+//use routes
+app.use('/simple-ecom/products', productRoutes); // GET routes are public
+app.use('/simple-ecom/auth', authRoutes); // Auth routes (login/register)
+app.use('/simple-ecom/orders', authMiddleware, orderRoutes); // Protect all order routes
+app.use('/simple-ecom/cart', authMiddleware, cartRoutes); // Protect all cart routes
+app.use('/simple-ecom/checkout', authMiddleware, checkoutRoutes); // Protect all checkout/payment routes
+app.use('/simple-ecom/mpesa', mpesaRoutes); // M-Pesa payment routes
 
-// The mpesa route for handling payment processing
-const mpesaRoutes = require("./routes/mpesa"); // MPESA routes (for handling mobile payments)
-app.use("/mpesa", mpesaRoutes);  // All routes starting with '/mpesa' will be handled by the mpesaRoutes
-
-// Starting the server and listening on port 5000
-app.listen(5000, () => console.log(`🚀 Server running on port 5000`)); // Log a message when the server is up and running
+//start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Ecommerce backend server is running on http://localhost:${PORT}`);
+});

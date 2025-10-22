@@ -10,13 +10,13 @@ export default function Dashboard() {
   const [form, setForm] = useState({ name: "", price: "", description: "" });
 
   useEffect(() => {
-    if (!user || user.username !== "Rkamunu") {
+    if (!user || user.username !== "nailan") {
       alert("🚫 Access denied");
       navigate("/");
     } else {
       loadProducts();
     }
-  }, []);
+  }, [navigate, user]);
 
   const loadProducts = () => {
     API.get("/simple-ecom/products")
@@ -84,7 +84,7 @@ export default function Dashboard() {
                 <h6>KES {p.price}</h6>
                 <button
                   onClick={() => deleteProduct(p._id)}
-                  className="btn btn-danger w-100"
+                  className="btn btn-secondary w-100"
                 >
                   Delete
                 </button>

@@ -78,9 +78,9 @@ export default function Cart() {
                 placeholder="Enter phone number (e.g +254700000000)"
                 className="form-control"
               />
-              <p>NOTE: The money will not be reversed</p>
-              <button type="submit" className="btn btn-success w-100 mt-2">
-                💰 Pay Total with M-Pesa
+              <p>Thank you for shopping with us😎</p>
+              <button type="submit" className="btn btn-primary w-100 mt-2">
+                💰 M-Pesa
               </button>
             </form>
           </div>

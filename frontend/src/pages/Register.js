@@ -35,6 +35,13 @@ export default function Register() {
           <input name="username" className="form-control" onChange={handleChange} required />
         </div>
 
+        {/* Username input field */}
+        <div className="mb-3">
+          <label>Email</label> {/* Label for the username input */}
+          {/* Input field for the username, onChange calls handleChange to update the form state */}
+          <input type="email" name="email" className="form-control" onChange={handleChange} required />
+        </div>
+
         {/* Password input field */}
         <div className="mb-3">
           <label>Password</label> {/* Label for the password input */}

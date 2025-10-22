@@ -1,96 +1,100 @@
-// Products routes
-
-// Import necessary modules
+//product routes
+//import necessary modules
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/product');
+const Product = require('../models/Product'); // Import the Product model
+const authMiddleware = require('../middleware/auth'); // Import the auth middleware
 
-// Create a new product
-router.post("/", async (req, res) => {
+//create product
+router.post('/', authMiddleware, async (req, res) => {
     try {
-        const { name, price, description } = req.body;
-        // Save the product to the database
-        const product = new Product({ name, price, description });
+        const { name, description, price  } = req.body;
+        const product = new Product({ name, description, price, seller: req.user });
         await product.save();
-        // Return created product and a message
-        res.status(201).json({ message: "Product created successfully", product });
-    } catch (err) {
-        console.error('Error creating product:', err);
-        res.status(500).json({ error: 'Failed to create product' });
+        const populatedProduct = await product.populate('seller', 'username'); // Populating here is good
+        res.status(201).json({ message: "Product created successfully", product: populatedProduct });
+    } catch (error) {
+        res.status(500).json({ message: "Product creation failed", error });
     }
 });
 
-// Read/Get all products
-router.get("/", async (req, res) => {
-    try {
-        const products = await Product.find();
+/// Get all products
+router.get('/', async (req, res) => {
+  try {
+    const products = await Product.find().populate('seller', 'username');
 
-        // If no products found/exists
-        if (products.length === 0) {
-            return res.status(404).json({ message: "No products found" });
-        }
-
-        // Send the products if they exist
-        res.status(200).json(products);
-    } catch (err) {
-        console.error('Error fetching products:', err);
-        res.status(500).json({ error: 'Failed to fetch products' });
+    // If NO PRODUCTS FOUND
+    if (products.length === 0) {
+      return res.status(404).json({ message: "No products found" });
     }
+
+    // If products exist, send them
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 
-// Read/get one product by its ID
-router.get("/:id", async (req, res) => {
+//Read/get one product by ID
+router.get('/:id', async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
-        // If product not found
+        // If PRODUCT NOT FOUND
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
-        res.status(200).json(product); // if product found
-    } catch (err) {
-        console.error(`Error fetching product ${req.params.id}:`, err);
-        res.status(500).json({ error: 'Failed to fetch product' });
+        res.status(200).json(product);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 
-// Update a product by its ID
-router.put("/:id", async (req, res) => {
+//update product by ID
+router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        // Fetch the records from the form in the frontend
-        const { name, price, description } = req.body;
-        // Update the product in the database
-        const updated = await Product.findByIdAndUpdate(
-            req.params.id,
-            { name, price, description },
-            { new: true }
-        );
-
-        if (!updated) return res.status(404).json({ message: 'Product not found' });
-
-        // If product updated successfully
-        res.status(200).json({ message: "Product updated successfully", product: updated });
-    } catch (err) {
-        console.error(`Error updating product ${req.params.id}:`, err);
-        res.status(500).json({ error: 'Failed to update product' });
-    }
-});
-
-// Delete a product by its ID
-router.delete("/:id", async (req, res) => {
-    try {
-        // Get the product by its ID and delete it
-        const product = await Product.findByIdAndDelete(req.params.id);
-        // If product not found
+        //Fetch the record forom the form in the frontend
+        const product = await Product.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
-        // If product deleted successfully
+        // Check if the logged-in user is the seller
+        if (product.seller.toString() !== req.user) {
+            return res.status(403).json({ message: "User not authorized to update this product" });
+        }
+
+        const { name, description, price } = req.body;
+        // Update the product in the database and get the updated document
+        let updatedProduct = await Product.findByIdAndUpdate(req.params.id, { name, description, price }, { new: true });
+        
+        //if product updated successfully
+        updatedProduct = await updatedProduct.populate('seller', 'username');
+        res.status(200).json({ message: "Product updated successfully", product: updatedProduct });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+     //delete product by ID
+     router.delete('/:id', authMiddleware, async (req, res) => {
+     try {
+        //Get product ID from the URL and delete the product
+        const product = await Product.findById(req.params.id);
+        // If PRODUCT NOT FOUND
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+        // Check if the logged-in user is the seller
+        if (product.seller.toString() !== req.user) {
+            return res.status(403).json({ message: "User not authorized to delete this product" });
+        }
+        await Product.findByIdAndDelete(req.params.id);
+        //if product deleted successfully
         res.status(200).json({ message: "Product deleted successfully" });
-    } catch (err) {
-        console.error(`Error deleting product ${req.params.id}:`, err);
-        res.status(500).json({ error: 'Failed to delete product' });
-    }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }   
 });
 
+//export the router
 module.exports = router;

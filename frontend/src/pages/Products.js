@@ -30,7 +30,7 @@ export default function Products() {
 
   return (
     <div>
-      <h3>Available Products</h3>
+      <h3>Our Hot Deals Products</h3>
       <div className="row">
         {products.map(p => (
           <div key={p._id} className="col-md-4 mb-3">
@@ -64,4 +64,4 @@ export default function Products() {
       </div>
     </div>
   );
-}
+}  

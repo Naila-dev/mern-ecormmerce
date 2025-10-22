@@ -1,21 +1,17 @@
-// The user model
-
-// Initialize mongoose
 const mongoose = require('mongoose');
 
-// Define the user schema
+// --- User Model Definition ---
 const userSchema = new mongoose.Schema({
-    username: {
-        type: String,
-        required: true,
-        unique: true,},
-    password: {
-        type: String,
-        required: true,},
-    });
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    cart: [
+        {
+            product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+            quantity: { type: Number, default: 1 }
+        }
+    ]
+});
 
-// Create the user model
 const User = mongoose.model('User', userSchema);
 
-// Export the user model
 module.exports = User;

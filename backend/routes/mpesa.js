@@ -1,73 +1,60 @@
-// routes/mpesa_stk.js
-// --------------------------------------
-// 💰 M-Pesa STK Push Route (Daraja Sandbox)
-// --------------------------------------
-
-const express = require("express");
-const axios = require("axios");
+const express = require('express');
 const router = express.Router();
+const axios = require('axios');
+const Order = require('../models/Order');
+const User = require('../models/User');
+// No longer need authMiddleware or helpers here, as the initiation is done in checkout.js
 
-// 🔑 Credentials (from Safaricom Developer Portal)
-const consumerKey = "AY0lso7icTtw8p3b7BW1sBYw3Ky3BC1yCFdYsYMRDMOmnUuc";
-const consumerSecret = "W34pFwqid0vwqHGL8RoyX3ZlGZvIAjcCySU8utmPMANcltdZw3beKuPl2xQz70gC";
-const shortcode = "3560653"; // Lipa Na M-Pesa sandbox shortcode
-const passkey = "e0dcd9d6a9dae8f52d1262008d1bfbaa65c945ac0dd3ed55fc92095a9c972881";
+/**
+ * @route   POST /simple-ecom/mpesa/callback
+ * @desc    M-Pesa callback URL for payment status
+ * @access  Public
+ */
+router.post('/callback', async (req, res) => {
+    console.log('--- M-Pesa Callback Received ---');
+    const callbackData = req.body;
+    console.log(JSON.stringify(callbackData, null, 2));
 
-// 🟢 Step 1: Get Access Token
-async function getAccessToken() {
-  const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
-  const response = await axios.get(
-    "https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
-    { headers: { Authorization: `Basic ${auth}` } }
-  );
-  return response.data.access_token;
-}
+    // Acknowledge receipt of the callback immediately
+    res.status(200).json({ message: 'Callback received successfully.' });
 
-// 🟢 Step 2: Handle STK Push request
-router.post("/stkpush", async (req, res) => {
-  const { phone, amount } = req.body;
+    // Process the callback data
+    const body = callbackData.Body && callbackData.Body.stkCallback;
+    if (!body) {
+        console.error('Invalid M-Pesa callback format received.');
+        return;
+    }
 
-  try {
-    const timestamp = new Date().toISOString().replace(/[-:T.]/g, "").slice(0, 14);
-    const password = Buffer.from(
-      shortcode + passkey + timestamp
-    ).toString("base64");
+    const checkoutRequestId = body.CheckoutRequestID;
+    const resultCode = body.ResultCode;
 
-    // Get token
-    const token = await getAccessToken();
+    try {
+        // Find the order using the CheckoutRequestID
+        const order = await Order.findOne({ transactionId: checkoutRequestId });
 
-    // Prepare M-Pesa STK Push payload
-    const payload = {
-      BusinessShortCode: 3560653,
-      Password: password,
-      Timestamp: timestamp,
-      TransactionType: "CustomerBuyGoodsOnline",
-      Amount: amount,
-      PartyA: phone,
-      PartyB: 6444134,
-      PhoneNumber: phone,
-      CallBackURL: "https://darajapayment.onrender.com/api/callback",
-      AccountReference: "Innovex Shop",
-      TransactionDesc: "E-commerce payment",
-    };
-
-    // Send request to M-Pesa API
-    const response = await axios.post(
-      "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+        if (!order) {
+            console.error(`Order not found for CheckoutRequestID: ${checkoutRequestId}`);
+            return;
         }
-      }
-    );
 
-    res.json(response.data);
-  } catch (error) {
-    console.error("STK Push Error:", error.response ? error.response.data : error.message);
-    res.status(500).json({ error: "Failed to send STK Push" });
-  }
+        if (resultCode === 0) {
+            // Payment was successful
+            order.paymentStatus = 'completed';
+            await order.save();
+            console.log(`Order ${order._id} marked as completed.`);
+
+            // Clear the user's cart
+            await User.updateOne({ _id: order.user }, { $set: { cart: [] } });
+            console.log(`Cart cleared for user ${order.user}.`);
+        } else {
+            // Payment failed or was cancelled
+            order.paymentStatus = 'failed';
+            await order.save();
+            console.log(`Order ${order._id} marked as failed. Reason: ${body.ResultDesc}`);
+        }
+    } catch (error) {
+        console.error('Error processing M-Pesa callback:', error);
+    }
 });
 
 module.exports = router;
