@@ -1,91 +1,139 @@
-// src/pages/Cart.js
-import React, { useState, useEffect } from "react";
-import API from "../api/axios";
+import React, { useState, useMemo } from 'react';
+import PropTypes from 'prop-types';
 
-export default function Cart() {
-  const [cart, setCart] = useState([]);
-  const [phone, setPhone] = useState("");
+/**
+ * A component to display the shopping cart and handle the checkout process.
+ */
+function Cart({ cartItems, onUpdateQuantity, onRemoveItem, onCheckout }) {
+    const [paymentMethod, setPaymentMethod] = useState('mpesa');
+    const [phone, setPhone] = useState('');
+    const [bankTransactionId, setBankTransactionId] = useState('');
 
-  useEffect(() => {
-    const items = JSON.parse(localStorage.getItem("cart")) || [];
-    setCart(items);
-  }, []);
+    // useMemo will prevent recalculating the total on every render, only when cartItems changes.
+    const totalAmount = useMemo(() => {
+        return cartItems.reduce((sum, item) => {
+            // Ensure product and price exist before calculating
+            if (item.product && typeof item.product.price === 'number') {
+                return sum + item.product.price * item.quantity;
+            }
+            return sum;
+        }, 0).toFixed(2);
+    }, [cartItems]);
 
-  const payWithMpesa = (amount) => {
-    if (!phone) {
-      alert("Please enter a phone number!");
-      return;
-    }
+    const handleCheckout = (e) => {
+        e.preventDefault();
+        // Basic validation before calling the checkout handler
+        if (paymentMethod === 'mpesa' && !/^(254|0)\d{9}$/.test(phone)) {
+            alert('Please enter a valid phone number (e.g., 254712345678) for M-Pesa.');
+            return;
+        }
+        onCheckout({ paymentMethod, phone, transactionId: bankTransactionId });
+    };
 
-    API.post("/mpesa/stkpush", { phone, amount })
-      .then(() => alert("📲 STK Push sent! Check your phone."))
-      .catch(() => alert("❌ Error sending STK push"));
-  };
+    return (
+        <div>
+            <h3>Shopping Cart</h3>
+            {cartItems.length === 0 ? (
+                <p>Your cart is empty.</p>
+            ) : (
+                <>
+                    <ul className="list-group mb-3">
+                        {cartItems.map(item => (
+                            <li key={item.product._id} className="list-group-item d-flex justify-content-between lh-sm">
+                                <div>
+                                    <h6 className="my-0">{item.product.name}</h6>
+                                    <small className="text-muted">Price: ${item.product.price.toFixed(2)}</small>
+                                </div>
+                                <div className="d-flex align-items-center">
+                                    <input
+                                        type="number"
+                                        value={item.quantity}
+                                        onChange={(e) => onUpdateQuantity(item.product._id, parseInt(e.target.value, 10))}
+                                        className="form-control form-control-sm"
+                                        style={{ width: '60px', textAlign: 'center' }}
+                                        min="1"
+                                    />
+                                    <button onClick={() => onRemoveItem(item.product._id)} className="btn btn-sm btn-outline-danger ms-2">Remove</button>
+                                </div>
+                            </li>
+                        ))}
+                        <li className="list-group-item d-flex justify-content-between">
+                            <span>Total (USD)</span>
+                            <strong>${totalAmount}</strong>
+                        </li>
+                    </ul>
 
-  const removeItem = (index) => {
-    const updatedCart = [...cart];
-    updatedCart.splice(index, 1);
-    setCart(updatedCart);
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
-  };
+                    <h4>Checkout</h4>
+                    <form onSubmit={handleCheckout}>
+                        <div className="my-3">
+                            <div className="form-check">
+                                <input id="mpesa" name="paymentMethod" type="radio" className="form-check-input" value="mpesa" checked={paymentMethod === 'mpesa'} onChange={(e) => setPaymentMethod(e.target.value)} required />
+                                <label className="form-check-label" htmlFor="mpesa">M-Pesa</label>
+                            </div>
+                            <div className="form-check">
+                                <input id="paypal" name="paymentMethod" type="radio" className="form-check-input" value="paypal" checked={paymentMethod === 'paypal'} onChange={(e) => setPaymentMethod(e.target.value)} required />
+                                <label className="form-check-label" htmlFor="paypal">PayPal</label>
+                            </div>
+                            <div className="form-check">
+                                <input id="bank" name="paymentMethod" type="radio" className="form-check-input" value="bank_transfer" checked={paymentMethod === 'bank_transfer'} onChange={(e) => setPaymentMethod(e.target.value)} required />
+                                <label className="form-check-label" htmlFor="bank">Bank Transfer</label>
+                            </div>
+                        </div>
 
-  const total = cart.reduce((sum, item) => sum + Number(item.price), 0);
+                        {paymentMethod === 'mpesa' && (
+                            <div className="mb-3">
+                                <label htmlFor="phone" className="form-label">M-Pesa Phone Number</label>
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    className="form-control"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    placeholder="e.g., 254712345678"
+                                    required
+                                />
+                            </div>
+                        )}
 
-  const handlePhoneChange = (e) => {
-    setPhone(e.target.value);
-  };
+                        {paymentMethod === 'bank_transfer' && (
+                            <div className="mb-3">
+                                <label htmlFor="bankTransactionId" className="form-label">Bank Transaction ID</label>
+                                <input
+                                    type="text"
+                                    id="bankTransactionId"
+                                    className="form-control"
+                                    value={bankTransactionId}
+                                    onChange={(e) => setBankTransactionId(e.target.value)}
+                                    placeholder="Enter the transaction ID from your bank"
+                                    required
+                                />
+                            </div>
+                        )}
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    payWithMpesa(total);
-  };
+                        <hr className="my-4" />
 
-  return (
-    <div>
-      <h3>🛒 Your Cart</h3>
-      {cart.length === 0 ? (
-        <p>Your cart is empty!</p>
-      ) : (
-        <>
-          {cart.map((item, index) => (
-            <div key={index} className="card mb-2">
-              <div className="card-body d-flex justify-content-between">
-                <div>
-                  <h5>{item.name}</h5>
-                  <p>{item.description}</p>
-                  <h6>KES {item.price}</h6>
-                </div>
-                <button
-                  className="btn btn-danger"
-                  onClick={() => removeItem(index)}
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
-
-          <div className="card mt-3 p-3">
-            <h5>Total: KES {total}</h5>
-
-            <form onSubmit={handleSubmit}>
-              <input
-                type="number"
-                name="phone"
-                id="phone"
-                value={phone}
-                onChange={handlePhoneChange}
-                placeholder="Enter phone number (e.g +254700000000)"
-                className="form-control"
-              />
-              <p>Thank you for shopping with us😎</p>
-              <button type="submit" className="btn btn-primary w-100 mt-2">
-                💰 M-Pesa
-              </button>
-            </form>
-          </div>
-        </>
-      )}
-    </div>
-  );
+                        <button className="w-100 btn btn-primary btn-lg" type="submit">
+                            Proceed to Checkout
+                        </button>
+                    </form>
+                </>
+            )}
+        </div>
+    );
 }
+
+Cart.propTypes = {
+    cartItems: PropTypes.arrayOf(PropTypes.shape({
+        product: PropTypes.shape({
+            _id: PropTypes.string.isRequired,
+            name: PropTypes.string.isRequired,
+            price: PropTypes.number.isRequired,
+        }).isRequired,
+        quantity: PropTypes.number.isRequired,
+    })).isRequired,
+    onUpdateQuantity: PropTypes.func.isRequired,
+    onRemoveItem: PropTypes.func.isRequired,
+    onCheckout: PropTypes.func.isRequired,
+};
+
+export default Cart;

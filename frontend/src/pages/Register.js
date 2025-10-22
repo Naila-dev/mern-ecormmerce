@@ -1,57 +1,77 @@
-// Importing React and necessary hooks for managing state and navigation
+// src/Register.js
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-// Defining the Register component as a functional component
-export default function Register() {
-  // useState hook for managing the form data (username and password)
-  const [form, setForm] = useState({ username: "", password: "" });
-  
-  // useNavigate hook to programmatically navigate to different pages (used after successful registration)
-  const navigate = useNavigate();
+function Register({ onSwitchToLogin }) {
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+  });
+  const [message, setMessage] = useState("");
 
-  // handleChange function updates the form state whenever a user types in the input fields
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-  // handleRegister function is called when the form is submitted
-  const handleRegister = (e) => {
-    e.preventDefault(); // Preventing the default form submit behavior (page reload)
-    alert("✅ Registration successful! Please login."); // Displaying a success message
-    navigate("/login"); // Navigating to the login page after successful registration
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // JSX for the registration form
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      // It's good practice to move the base URL to an environment variable
+      // e.g., await axios.post(`${process.env.REACT_APP_API_URL}/auth/register`, form);
+      await axios.post("http://localhost:5000/simple-ecom/auth/register", form);
+      setMessage("✅ Registration successful! You can now log in.");
+      setTimeout(onSwitchToLogin, 1500); // auto-switch after success
+    } catch (err) {
+      setMessage("❌ Error registering user. Please try again.");
+    }
+  };
+
   return (
-    <div className="col-md-4 mx-auto"> {/* Centering the form inside a div */}
-      <h3>Register</h3> {/* Title of the registration page */}
-      
-      {/* Form element that will call handleRegister function when submitted */}
-      <form onSubmit={handleRegister}>
-        
-        {/* Username input field */}
-        <div className="mb-3">
-          <label>Username</label> {/* Label for the username input */}
-          {/* Input field for the username, onChange calls handleChange to update the form state */}
-          <input name="username" className="form-control" onChange={handleChange} required />
+     // Outer container with Bootstrap margin for spacing
+    <div className="container mt-5">
+      <div className="row justify-content-center">
+        <div className="col-md-6 col-lg-4">
+          <div className="card p-4">
+            <div className="card-body">
+              <h2 className="text-center mb-4">🧍‍♂️ Create Account</h2>
+              <form onSubmit={handleRegister}>
+                <div className="mb-3">
+                  <input
+                    name="username" // Added name attribute for form handling
+                    placeholder="Username" // Changed type to text for username
+                    className="form-control" // Bootstrap class for styling
+                    value={form.username} // Controlled component value
+                    onChange={handleChange} // Handle input change (updates state)
+                    required // HTML5 validation
+                  />
+                </div>
+                <div className="mb-3">
+                  <input
+                    type="password" //hide password input
+                    name="password"
+                    placeholder="Password"
+                    className="form-control"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary w-100">Sign Up</button>
+              </form>
+              {message && <div className="alert alert-info mt-3">{message}</div>}
+              <p className="mt-3 text-center">
+                Already have an account?{" "}
+                <button 
+                onClick={onSwitchToLogin} // Switch to login view
+                className="btn btn-link p-0" // Bootstrap link style
+                >Login</button>
+              </p>
+            </div>
+          </div>
         </div>
-
-        {/* Username input field */}
-        <div className="mb-3">
-          <label>Email</label> {/* Label for the username input */}
-          {/* Input field for the username, onChange calls handleChange to update the form state */}
-          <input type="email" name="email" className="form-control" onChange={handleChange} required />
-        </div>
-
-        {/* Password input field */}
-        <div className="mb-3">
-          <label>Password</label> {/* Label for the password input */}
-          {/* Input field for the password, type set to password to mask the input */}
-          <input type="password" name="password" className="form-control" onChange={handleChange} required />
-        </div>
-
-        {/* Submit button to trigger form submission */}
-        <button className="btn btn-success w-100">Register</button>
-      </form>
+      </div>
     </div>
   );
 }
+
+export default Register;
