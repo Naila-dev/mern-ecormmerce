@@ -12,11 +12,11 @@ const User = require('../models/User'); // Import the User model
 // Register
 router.post('/register', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, email, password } = req.body;
 
         // Basic validation
-        if (!username || !password) {
-            return res.status(400).json({ message: 'Please provide username and password.' });
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: 'Please provide username, email, and password.' });
         }
 
         // Check if user already exists
@@ -25,8 +25,14 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'Username already exists.' });
         }
 
+        // Check if email already exists
+        const existingEmail = await User.findOne({ email });
+        if (existingEmail) {
+            return res.status(400).json({ message: 'Email already registered.' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ username, password: hashedPassword });
+        const user = new User({ username, email, password: hashedPassword }); // Pass email to User constructor
         await user.save();
         res.status(201).json({ message: 'User registered successfully.' });
     } catch (error) {

@@ -1,13 +1,17 @@
 
 // src/App.js
 import React, { useState, useEffect } from "react";
-import { jwtDecode } from "jwt-decode";
-import Login from "./Login";
-import Register from "./Register";
-import ProductList from './ProductList';
-import ProductForm from './ProductForm';
-import Cart from './Cart';
-import api from './api';
+import { jwtDecode } from 'jwt-decode';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ProductList from './pages/ProductList';
+import ProductForm from './pages/ProductForm';
+import Cart from './pages/Cart';
+import api from './api/axios';
+// d:\full-stack\simple-ecom\frontend\src\index.js (or App.js)
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min'; // Imports Bootstrap's JS bundle
+
 
 function App() {
   const [products, setProducts] = useState([]);

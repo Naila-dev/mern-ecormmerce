@@ -1,6 +1,7 @@
 // import necessary libraries
 import React, { useState } from "react";
-import axios from "axios";
+import api from '../api/axios'; // Use the centralized API instance
+import styles from './Login.module.css'; // Import CSS Module
 
 // define the Login component
 function Login({ onLoginSuccess, onSwitchToRegister }) {
@@ -18,9 +19,7 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
     setError("");
     setSuccessMessage("");
     try {
-      // It's good practice to move the base URL to an environment variable
-      // e.g., const res = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, form);
-      const res = await axios.post("http://localhost:5000/simple-ecom/auth/login", form);
+      const res = await api.post("/auth/login", form); // Use the api instance
       localStorage.setItem("token", res.data.token);
       setSuccessMessage("Login successful! Redirecting...");
       onLoginSuccess();
@@ -34,9 +33,9 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
     <div className="container mt-5">
       <div className="row justify-content-center">
         <div className="col-md-6 col-lg-4">
-          <div className="card p-4">
+          <div className={`card p-4 ${styles.card}`}>
             <div className="card-body">
-              <h2 className="text-center mb-4">🔐 Sign In</h2>
+              <h2 className={`text-center mb-4 ${styles.title}`}>🔐 Sign In</h2>
               <form onSubmit={handleLogin}>
                 <div className="mb-3">
                   <input
@@ -63,7 +62,7 @@ function Login({ onLoginSuccess, onSwitchToRegister }) {
                 {successMessage && <p className="text-success mt-3">{successMessage}</p>}
                 {error && <p className="text-danger mt-3">{error}</p>}
               </form>
-              <p className="mt-3 text-center">
+              <p className={`mt-3 text-center ${styles.switchText}`}>
                 Don’t have an account?{" "}
                 <button onClick={onSwitchToRegister} className="btn btn-link p-0">Sign up</button>
               </p>

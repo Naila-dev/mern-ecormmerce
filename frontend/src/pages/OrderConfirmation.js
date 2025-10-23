@@ -77,7 +77,7 @@ function OrderConfirmation() {
                         ))}
                         <li className="list-group-item d-flex justify-content-between align-items-center fw-bold">
                             Total Amount
-                            <span>${order.totalAmount.toFixed(2)}</span>
+                            <span>KES{order.totalAmount.toFixed(2)}</span>
                         </li>
                     </ul>
                     <hr />

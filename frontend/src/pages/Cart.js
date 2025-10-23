@@ -58,8 +58,8 @@ function Cart({ cartItems, onUpdateQuantity, onRemoveItem, onCheckout }) {
                             </li>
                         ))}
                         <li className="list-group-item d-flex justify-content-between">
-                            <span>Total (USD)</span>
-                            <strong>${totalAmount}</strong>
+                            <span>Total (KES)</span>
+                            <strong>KES{totalAmount}</strong>
                         </li>
                     </ul>
 

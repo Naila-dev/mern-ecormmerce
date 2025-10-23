@@ -1,0 +1,19 @@
+/* d:/full-stack/simple-ecom/frontend/src/pages/Login.module.css */
+.card {
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15); /* More prominent shadow */
+  border: none;
+  border-radius: 0.75rem; /* Slightly rounded corners */
+  padding: 2.5rem; /* Increased padding */
+}
+
+.title {
+  font-weight: 700; /* Bolder title */
+  color: #212529; /* Darker, more prominent color */
+  font-size: 2.25rem; /* Larger title */
+  margin-bottom: 1.5rem; /* More space below title */
+}
+
+.switchText {
+  font-size: 1rem; /* Slightly larger text */
+  color: #6c757d; /* Muted but readable */
+}
