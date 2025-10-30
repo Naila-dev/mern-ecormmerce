@@ -18,7 +18,7 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
 app.use(cors({
     origin: allowedOrigins,
     credentials: true // Allow cookies and authorization headers
-}));giy
+}));
 
 //connect to MongoDB
 //Make sure MongoDB is running locally or in MongoDB Atlas
